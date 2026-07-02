@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-darkBg text-slate-200 antialiased selection:bg-brandAccent selection:text-white;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Ambient Background Noise - Add disabled class for low-end devices if needed */
+.bg-mesh {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background: radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.05), transparent 25%),
+              radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 25%);
+  filter: blur(80px);
+  pointer-events: none;
+}
