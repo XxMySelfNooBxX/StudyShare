@@ -10,6 +10,9 @@
     "build": "npx tsc",
     "dev": "nodemon src/index.ts"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

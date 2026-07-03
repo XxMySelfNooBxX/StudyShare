@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { setupSocket } from './config/socket';
 import authRoutes from './routes/auth';
+import tasksRoutes from './routes/tasks';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', tasksRoutes);
 
 // Socket.io
 setupSocket(httpServer);

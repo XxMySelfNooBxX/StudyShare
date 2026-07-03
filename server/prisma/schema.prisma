@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -17,6 +16,13 @@ model User {
   teams        Team[]
   comments     Comment[]
   taskHistory  TaskHistory[]
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  DONE
 }
 
 model Project {
@@ -43,15 +49,17 @@ model Team {
 }
 
 model Task {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   projectId   String
   title       String
   description String?
-  status      String   @default("TODO") // TODO, IN_PROGRESS, DONE, BLOCKED
+  status      TaskStatus @default(TODO)
+  position    Float
+  version     Int        @default(1)
   assignedTo  String?
   dueDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   comments    Comment[]
