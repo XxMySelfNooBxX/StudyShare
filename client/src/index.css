@@ -1,4 +1,4 @@
-@tailwind base;
+@import "tailwindcss";
 @tailwind components;
 @tailwind utilities;
 
@@ -18,7 +18,7 @@
   height: 100vh;
   z-index: -1;
   background: radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.05), transparent 25%),
-              radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 25%);
+    radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 25%);
   filter: blur(80px);
   pointer-events: none;
 }
