@@ -1,10 +1,38 @@
 // src/context/KanbanContext.tsx
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { io, type Socket } from 'socket.io-client';
 import type { Task, TaskStatus, SubTask, Comment, KanbanContextType } from '../types';
-import { useSocket } from '../hooks/useSocket';
 
 const KanbanContext = createContext<KanbanContextType | undefined>(undefined);
+
+let socketInstance: Socket | null = null;
+
+const getSocket = (): Socket | null => {
+  if (!socketInstance) {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    socketInstance = io(socketUrl, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    });
+
+    socketInstance.on('connect', () => {
+      console.log('✅ Socket connected');
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('❌ Socket disconnected');
+    });
+
+    socketInstance.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+  }
+
+  return socketInstance;
+};
 
 export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: string }> = ({
   children,
@@ -20,7 +48,6 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const socket = useSocket();
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async (projectId: string) => {
@@ -45,6 +72,7 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
       setTasks(tasksByStatus);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
     }
@@ -53,6 +81,8 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
   // Move task to different column
   const moveTask = useCallback(
     async (taskId: string, newStatus: TaskStatus, newPosition: number) => {
+      const socket = getSocket();
+
       // Optimistic update
       const updatedTasks = { ...tasks };
       let movedTask: Task | null = null;
@@ -77,12 +107,13 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
       // Emit WebSocket event
       socket?.emit('task:move', { taskId, newStatus, newPosition, projectId });
     },
-    [tasks, socket, projectId]
+    [tasks, projectId]
   );
 
   // Update task details
   const updateTask = useCallback(
     async (taskId: string, updates: Partial<Task>) => {
+      const socket = getSocket();
       const updatedTasks = { ...tasks };
 
       for (const status of Object.keys(updatedTasks) as TaskStatus[]) {
@@ -96,7 +127,7 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
       setTasks(updatedTasks);
       socket?.emit('task:update', { taskId, updates, projectId });
     },
-    [tasks, socket, projectId]
+    [tasks, projectId]
   );
 
   // Add sub-task
@@ -120,6 +151,8 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
   // Toggle sub-task completion
   const toggleSubtask = useCallback(
     async (taskId: string, subtaskId: string) => {
+      const socket = getSocket();
+
       setTasks((prevTasks) => {
         const newTasks = { ...prevTasks };
 
@@ -138,7 +171,7 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
 
       socket?.emit('subtask:toggle', { taskId, subtaskId, projectId });
     },
-    [socket, projectId]
+    [projectId]
   );
 
   // Delete sub-task
@@ -163,9 +196,10 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
   // Add comment
   const addComment = useCallback(
     async (taskId: string, content: string) => {
+      const socket = getSocket();
       socket?.emit('comment:add', { taskId, content, projectId });
     },
-    [socket, projectId]
+    [projectId]
   );
 
   // Delete comment
@@ -189,6 +223,7 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
 
   // Listen for WebSocket updates
   useEffect(() => {
+    const socket = getSocket();
     if (!socket) return;
 
     socket.on('task:move', (data) => {
@@ -235,7 +270,7 @@ export const KanbanProvider: React.FC<{ children: React.ReactNode; projectId: st
       socket.off('task:move');
       socket.off('comment:new');
     };
-  }, [socket]);
+  }, []);
 
   // Fetch tasks on mount
   useEffect(() => {
