@@ -13,17 +13,30 @@ interface TaskCardProps {
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onClick }) => {
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
-  const daysUntilDue = task.dueDate
-    ? Math.ceil((new Date(task.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  let due = task.dueDate ? new Date(task.dueDate) : null;
+  const now = new Date();
+  if (due) due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
+  const daysUntilDue = due
+    ? Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  // Color based on urgency
-  let urgencyColor = 'border-slate-600'; // safe
-  if (daysUntilDue !== null) {
-    if (daysUntilDue <= 1) urgencyColor = 'border-rose-500'; // critical (red)
-    else if (daysUntilDue <= 3) urgencyColor = 'border-amber-500'; // warning (amber)
-  }
+  const calculateUrgency = () => {
+    if (daysUntilDue === null) return 'safe';
+    if (daysUntilDue < 0) return 'critical';
+    if (daysUntilDue <= 3) return 'critical';
+    if (daysUntilDue <= 7) return 'warning';
+    return 'safe';
+  };
+
+  const urgency = task.urgency || calculateUrgency();
+
+  const borderColor = {
+    safe: 'border-slate-600',
+    warning: 'border-amber-500',
+    critical: 'border-rose-500'
+  }[urgency];
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -51,7 +64,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onClick }) => {
             onClick={onClick}
             className={`
               bg-slate-700 rounded-lg p-3 cursor-grab active:cursor-grabbing
-              border-l-4 ${urgencyColor} transition-all duration-300
+              border-l-4 ${borderColor} transition-all duration-300
               hover:bg-slate-600
             `}
           >
@@ -80,14 +93,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onClick }) => {
 
               {/* Due date badge */}
               {task.dueDate && (
-                <span className={`text-xs px-2 py-1 rounded ${isOverdue
-                    ? 'bg-rose-500/20 text-rose-300'
-                    : daysUntilDue && daysUntilDue <= 3
-                      ? 'bg-amber-500/20 text-amber-300'
-                      : 'bg-slate-600 text-slate-300'
-                  }`}>
-                  {daysUntilDue && daysUntilDue > 0 ? `${daysUntilDue}d` : 'Due'}
-                </span>
+                <div className={`text-xs px-2 py-1 rounded font-medium flex items-center gap-1 ${
+                  urgency === 'critical' ? 'bg-rose-500/20 text-rose-300' :
+                  urgency === 'warning' ? 'bg-amber-500/20 text-amber-300' :
+                  'bg-slate-600 text-slate-300'
+                }`}>
+                  <span>
+                    {daysUntilDue !== null && daysUntilDue < 0 ? 'Overdue' :
+                     urgency === 'critical' ? 'Critical' :
+                     urgency === 'warning' ? 'Warning' : 'Safe'}
+                  </span>
+                  <span className="opacity-75">
+                    ({daysUntilDue !== null && daysUntilDue > 0 ? `${daysUntilDue}d` : (daysUntilDue === 0 ? 'Today' : 'Past')})
+                  </span>
+                </div>
               )}
             </div>
 

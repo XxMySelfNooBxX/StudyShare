@@ -28,6 +28,8 @@ export interface Team {
 
 export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'DONE';
 
+export type TaskUrgency = 'safe' | 'warning' | 'critical';
+
 export interface Task {
     id: string;
     projectId: string;
@@ -37,6 +39,8 @@ export interface Task {
     assignedTo?: string;
     assignee?: User;
     dueDate?: string;
+    urgency?: TaskUrgency;
+    daysUntilDue?: number | null;
     position: number;
     version: number;
     createdAt: string;
@@ -67,14 +71,7 @@ export interface Comment {
     updatedAt: string;
 }
 
-export interface TaskHistory {
-    id: string;
-    taskId: string;
-    action: string;
-    changedBy: string;
-    changeDetails?: Record<string, any>;
-    timestamp: string;
-}
+
 
 export interface Suggestion {
     title: string;
@@ -82,18 +79,55 @@ export interface Suggestion {
     estimatedHours?: number;
 }
 
+export interface TaskHistory {
+  id: string;
+  taskId: string;
+  taskTitle?: string;
+  action: string;
+  changedBy: string;
+  changedByName?: string;
+  changeDetails?: Record<string, any>;
+  timestamp: string;
+}
+
+export interface Contributor {
+  userId: string;
+  name: string;
+  avatar?: string;
+  taskCount: number;
+  subtaskCount: number;
+  commentCount: number;
+  tasksCreated: number;
+  tasksCompleted: number;
+  lastActive: string;
+  role: 'owner' | 'member' | 'viewer' | string;
+}
+
 export interface KanbanContextType {
     tasks: Record<TaskStatus, Task[]>;
     selectedTask: Task | null;
     loading: boolean;
     error: string | null;
+    timeline?: any[];
+    taskFilter?: { dueDate?: string };
+    contributors?: Contributor[];
+    taskHistory?: TaskHistory[];
     setSelectedTask: (task: Task | null) => void;
+    createTask: (projectId: string, taskData: Partial<Task>, enableSuggestions?: boolean) => Promise<any>;
     moveTask: (taskId: string, newStatus: TaskStatus, newPosition: number) => Promise<void>;
     updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
-    addSubtask: (taskId: string, subtask: SubTask) => void;
+    addSubtask: (taskId: string, title: string) => Promise<void>;
     toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
     deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
     addComment: (taskId: string, content: string) => Promise<void>;
     deleteComment: (taskId: string, commentId: string) => Promise<void>;
     fetchTasks: (projectId: string) => Promise<void>;
+    fetchTaskDetails: (taskId: string) => Promise<void>;
+
+    filterByDeadline: (dueDate?: string) => void;
+    getCriticalTasks: () => Task[];
+    getSortedTasksByDeadline: () => Task[];
+    fetchContributors: (projectId: string) => Promise<void>;
+    fetchTaskHistory: (taskId: string) => Promise<void>;
+    exportPDF: (projectId: string, options: { includeComments: boolean; includeHistory: boolean; includeContributors: boolean; }) => Promise<void>;
 }

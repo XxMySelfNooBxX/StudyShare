@@ -1,7 +1,8 @@
 import React from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { m } from 'framer-motion';
-import { Task, TaskStatus } from '../context/KanbanContext';
+import { useKanban } from '../context/KanbanContext';
+import type { Task, TaskStatus } from '../types';
 import TaskCard from './TaskCard';
 
 interface ColumnProps {
@@ -12,6 +13,8 @@ interface ColumnProps {
 }
 
 const Column: React.FC<ColumnProps> = ({ status, title, tasks, index }) => {
+  const { setSelectedTask } = useKanban();
+
   return (
     <m.div
       initial={{ y: 20, opacity: 0 }}
@@ -32,12 +35,14 @@ const Column: React.FC<ColumnProps> = ({ status, title, tasks, index }) => {
 
       <Droppable droppableId={status}>
         {(provided, snapshot) => (
-          <div
+          <m.div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
-              snapshot.isDraggingOver ? 'bg-slate-700/50 border-brandAccent/30' : 'bg-transparent'
-            }`}
+            className="flex-1 p-3 overflow-y-auto"
+            animate={{
+              backgroundColor: snapshot.isDraggingOver ? 'rgba(51, 65, 85, 0.8)' : 'rgba(0, 0, 0, 0)',
+            }}
+            transition={{ duration: 0.2 }}
           >
             {tasks.length === 0 && !snapshot.isDraggingOver && (
               <div className="h-24 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center opacity-50">
@@ -46,10 +51,15 @@ const Column: React.FC<ColumnProps> = ({ status, title, tasks, index }) => {
             )}
             
             {tasks.map((task, idx) => (
-              <TaskCard key={task.id} task={task} index={idx} />
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                index={idx} 
+                onClick={() => setSelectedTask(task)} 
+              />
             ))}
             {provided.placeholder}
-          </div>
+          </m.div>
         )}
       </Droppable>
     </m.div>

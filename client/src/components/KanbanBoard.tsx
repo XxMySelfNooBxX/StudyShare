@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { DragDropContext, DropResult } from '@hello-pangea/dnd';
-import { m } from 'framer-motion';
-import { useKanban, TaskStatus } from '../context/KanbanContext';
+import React, { useState, useEffect } from 'react';
+import { DragDropContext } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
+
+import { useKanban } from '../context/KanbanContext';
+import type { TaskStatus } from '../types';
 import Column from './Column';
 
 interface KanbanBoardProps {
-  projectId: string;
-  userId: string;
+  // Empty
 }
 
 const STATUS_COLUMNS: { id: TaskStatus; title: string }[] = [
@@ -16,9 +17,15 @@ const STATUS_COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: 'DONE', title: 'Done' }
 ];
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ projectId, userId }) => {
-  const { tasks, moveTask } = useKanban();
-  const [xPosition, setXPosition] = useState(0);
+const KanbanBoard: React.FC<KanbanBoardProps> = () => {
+  const { tasks, moveTask, taskFilter } = useKanban();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -53,33 +60,26 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ projectId, userId }) => {
       }
     }
 
-    moveTask(draggableId, sourceStatus, destStatus, source.index, destination.index, newPosition, projectId, userId);
+    moveTask(draggableId, destStatus, newPosition);
   };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="h-full w-full overflow-hidden">
-        {/* Mobile carousel vs Desktop flex */}
-        <m.div 
-          className="flex h-full gap-6 pb-4 md:px-0 px-4"
-          drag="x"
-          dragConstraints={{ left: -800, right: 0 }}
-          animate={{ x: xPosition }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          dragElastic={0.1}
-          // Only enable drag on small screens by using CSS to handle overflow on desktop
-          style={{ cursor: 'grab' }}
+        <div 
+          className={`h-full pb-4 md:px-0 px-4 ${isMobile ? 'flex overflow-x-auto gap-6 snap-x snap-mandatory' : 'grid grid-cols-4 gap-4'}`}
         >
           {STATUS_COLUMNS.map((col, index) => (
-            <Column
-              key={col.id}
-              status={col.id}
-              title={col.title}
-              tasks={tasks[col.id] || []}
-              index={index}
-            />
+            <div key={col.id} className={isMobile ? "min-w-[85vw] snap-center" : ""}>
+              <Column
+                status={col.id}
+                title={col.title}
+                tasks={(tasks[col.id] || []).filter(t => !taskFilter?.dueDate || (t.dueDate && t.dueDate.startsWith(taskFilter.dueDate)))}
+                index={index}
+              />
+            </div>
           ))}
-        </m.div>
+        </div>
       </div>
     </DragDropContext>
   );
