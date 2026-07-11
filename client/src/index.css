@@ -1,31 +1,187 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* ─── Design Tokens ─────────────────────────────────────────────── */
 :root {
-  color-scheme: light;
+  --bg-base:       #0d0e14;
+  --bg-surface:    #13141c;
+  --bg-elevated:   #1a1b25;
+  --bg-overlay:    #21222e;
+  --bg-highlight:  #2a2c3d;
+
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-soft:   rgba(255,255,255,0.10);
+  --border-medium: rgba(255,255,255,0.16);
+
+  --text-primary:   #f0f1fa;
+  --text-secondary: #8b8fa8;
+  --text-muted:     #5b5e73;
+  --text-placeholder: #404257;
+
+  --accent:         #6366f1;
+  --accent-hover:   #7c7fff;
+  --accent-muted:   rgba(99,102,241,0.15);
+
+  --green:          #22c55e;
+  --green-muted:    rgba(34,197,94,0.15);
+  --amber:          #f59e0b;
+  --amber-muted:    rgba(245,158,11,0.15);
+  --rose:           #f43f5e;
+  --rose-muted:     rgba(244,63,94,0.15);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 0 1px var(--accent), 0 4px 20px rgba(99,102,241,0.25);
 }
 
-html.dark {
-  color-scheme: dark;
-}
-
-html.dark {
-  @apply bg-slate-900 text-slate-100;
-}
+/* ─── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  @apply bg-white text-slate-900;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  color-scheme: dark;
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100dvh;
 }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-highlight); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-medium); }
+
+/* ─── Background Mesh ────────────────────────────────────────────── */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(99,102,241,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 110%, rgba(139,92,246,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ─── Glass surfaces ─────────────────────────────────────────────── */
+.glass {
+  background: rgba(26, 27, 37, 0.75);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid var(--border-subtle);
+}
+.glass-elevated {
+  background: rgba(33, 34, 46, 0.85);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--border-soft);
+}
+
+/* ─── Input base ─────────────────────────────────────────────────── */
+.input-base {
+  width: 100%;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-base::placeholder { color: var(--text-placeholder); }
+.input-base:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+}
+
+/* ─── Button variants ────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius-md);
+  font-size: 0.8125rem; font-weight: 600; font-family: inherit;
+  background: var(--accent);
+  color: white;
+  border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-md); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--radius-md);
+  font-size: 0.8125rem; font-weight: 500; font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-soft); }
+
+/* ─── Tag / badge ────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.tag-green  { background: var(--green-muted);  color: var(--green); }
+.tag-amber  { background: var(--amber-muted);  color: var(--amber); }
+.tag-rose   { background: var(--rose-muted);   color: var(--rose); }
+.tag-accent { background: var(--accent-muted); color: var(--accent); }
+.tag-muted  { background: var(--bg-highlight); color: var(--text-secondary); }
+
+/* ─── Column drop highlight ──────────────────────────────────────── */
+.col-dropping {
+  background: rgba(99,102,241,0.06) !important;
+  border-color: rgba(99,102,241,0.3) !important;
+}
+
+/* ─── Animate shimmer on skeleton ───────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-overlay) 50%, var(--bg-elevated) 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite ease-in-out;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Pulse dot ──────────────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.live-dot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ─── Utility ────────────────────────────────────────────────────── */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }

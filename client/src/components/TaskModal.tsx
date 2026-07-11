@@ -11,8 +11,10 @@ interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
-  task?: Task | null; // if null, it's a create modal
+  task?: Task | null;
 }
+
+type ModalTab = 'details' | 'subtasks' | 'comments' | 'history';
 
 export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId, task }) => {
   const { createTask, updateTask, fetchTaskDetails } = useKanban();
@@ -21,10 +23,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
   const [dueDate, setDueDate] = useState('');
   const [enableSuggestions, setEnableSuggestions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // For newly created task suggestions
   const [suggestedSubtasks, setSuggestedSubtasks] = useState<Suggestion[]>([]);
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ModalTab>('details');
 
   useEffect(() => {
     if (isOpen) {
@@ -35,7 +36,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
         setEnableSuggestions(false);
         setSuggestedSubtasks([]);
         setCreatedTaskId(null);
-        // Fetch full task details (comments etc) when opened
+        setActiveTab('details');
         fetchTaskDetails(task.id);
       } else {
         setTitle('');
@@ -44,6 +45,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
         setEnableSuggestions(true);
         setSuggestedSubtasks([]);
         setCreatedTaskId(null);
+        setActiveTab('details');
       }
     }
   }, [isOpen, task, fetchTaskDetails]);
@@ -51,7 +53,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
     setIsSubmitting(true);
     try {
       if (task) {
@@ -59,7 +60,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
         onClose();
       } else {
         const response = await createTask(projectId, { title, description, dueDate: dueDate || undefined }, enableSuggestions);
-        if (response && response.suggestedSubtasks && response.suggestedSubtasks.length > 0) {
+        if (response?.suggestedSubtasks?.length > 0) {
           setSuggestedSubtasks(response.suggestedSubtasks);
           setCreatedTaskId(response.task.id);
         } else {
@@ -81,182 +82,283 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, projectId
     }
   };
 
+  // Due date urgency
+  const daysLeft = (() => {
+    if (!dueDate) return null;
+    const d = new Date(dueDate);
+    const n = new Date();
+    d.setHours(0, 0, 0, 0); n.setHours(0, 0, 0, 0);
+    return Math.ceil((d.getTime() - n.getTime()) / 86400000);
+  })();
+  const dueBg   = daysLeft === null ? '' : daysLeft < 0 ? 'rgba(244,63,94,0.12)' : daysLeft <= 3 ? 'rgba(244,63,94,0.12)' : daysLeft <= 7 ? 'rgba(245,158,11,0.12)' : 'rgba(99,102,241,0.12)';
+  const dueColor = daysLeft === null ? '' : daysLeft < 0 ? '#fb7185' : daysLeft <= 3 ? '#fb7185' : daysLeft <= 7 ? '#fbbf24' : '#818cf8';
+
+  const modalTabs: { id: ModalTab; label: string }[] = task
+    ? [
+        { id: 'details', label: 'Details' },
+        { id: 'subtasks', label: 'Subtasks' },
+        { id: 'comments', label: 'Comments' },
+        { id: 'history', label: 'History' },
+      ]
+    : [{ id: 'details', label: 'Details' }];
+
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+      {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-          className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh] overflow-hidden"
+          key="backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {task ? 'Edit Task' : 'Create New Task'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-6 overflow-y-auto">
-            {suggestedSubtasks.length > 0 && createdTaskId ? (
-              <div className="space-y-4">
-                <div className="bg-indigo-50 text-indigo-800 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-1">Task created successfully!</h3>
-                  <p className="text-sm">Based on your title, we've generated some suggested sub-tasks. Add the ones you need.</p>
-                </div>
-                <div className="space-y-2 mt-4">
-                  {suggestedSubtasks.map((suggestion, idx) => (
-                    <SuggestionCard
-                      key={idx}
-                      suggestion={suggestion}
-                      index={idx}
-                      onAdd={handleAddSuggestion}
-                    />
-                  ))}
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={onClose}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form id="task-form" onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                    autoFocus
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 sm:text-sm transition-shadow"
-                    placeholder="E.g., Implement login page"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 sm:text-sm transition-shadow resize-none"
-                    placeholder="Add details about this task..."
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    id="dueDate"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 sm:text-sm transition-shadow"
-                  />
-                  {dueDate && (() => {
-                    const now = new Date();
-                    const due = new Date(dueDate);
-                    now.setHours(0, 0, 0, 0);
-                    due.setHours(0, 0, 0, 0);
-                    const days = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                    
-                    let urgency = 'safe';
-                    if (days < 0) urgency = 'critical';
-                    else if (days <= 3) urgency = 'critical';
-                    else if (days <= 7) urgency = 'warning';
-
-                    return (
-                      <div className={`text-xs px-2 py-1 rounded mt-2 inline-block font-medium ${
-                        urgency === 'critical' ? 'bg-rose-500/20 text-rose-600' :
-                        urgency === 'warning' ? 'bg-amber-500/20 text-amber-600' :
-                        'bg-slate-200 text-slate-700'
-                      }`}>
-                        {urgency.charAt(0).toUpperCase() + urgency.slice(1)} priority
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {!task && (
-                  <div className="flex items-center">
-                    <input
-                      id="enableSuggestions"
-                      type="checkbox"
-                      checked={enableSuggestions}
-                      onChange={(e) => setEnableSuggestions(e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="enableSuggestions" className="ml-2 block text-sm text-gray-700">
-                      Generate suggested sub-tasks
-                    </label>
-                  </div>
-                )}
-
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-soft)',
+              borderRadius: 'var(--radius-xl)',
+              width: '100%', maxWidth: 520,
+              maxHeight: '90dvh',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: 'var(--shadow-lg)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* ── Header ── */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <div>
+                <h2 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                  {suggestedSubtasks.length > 0 && createdTaskId
+                    ? '✨ AI Suggested Subtasks'
+                    : task ? 'Edit Task' : 'New Task'}
+                </h2>
                 {task && (
-                  <>
-                    <div className="pt-2 border-t border-gray-100">
-                      <SubTaskList taskId={task.id} subtasks={task.subtasks || []} />
-                    </div>
-                    <div className="pt-2 border-t border-gray-100">
-                      <CommentThread taskId={task.id} comments={task.comments || []} />
-                    </div>
-                    <div className="pt-2 border-t border-gray-100">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">History</h4>
-                      <TaskHistory taskId={task.id} />
-                    </div>
-                  </>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>ID: {task.id.slice(0, 8)}…</p>
                 )}
-              </form>
-            )}
-          </div>
-
-          {/* Footer (only show if not in suggestions mode) */}
-          {!(suggestedSubtasks.length > 0 && createdTaskId) && (
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              </div>
               <button
-                type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                aria-label="Close modal"
+                style={{
+                  width: 30, height: 30, borderRadius: 8,
+                  background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'var(--text-secondary)',
+                  transition: 'all 0.15s',
+                }}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="task-form"
-                disabled={isSubmitting || !title.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                {isSubmitting ? 'Saving...' : task ? 'Save Changes' : 'Create Task'}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
               </button>
             </div>
-          )}
+
+            {/* ── Tabs (edit mode) ── */}
+            {task && !createdTaskId && (
+              <div style={{
+                display: 'flex', gap: 4, padding: '10px 16px 0',
+                borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0,
+              }}>
+                {modalTabs.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+                      fontSize: '0.78rem', fontWeight: activeTab === t.id ? 600 : 400,
+                      color: activeTab === t.id ? 'var(--accent)' : 'var(--text-muted)',
+                      background: 'none', border: 'none',
+                      borderBottom: activeTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      marginBottom: -1, transition: 'all 0.15s',
+                    }}
+                  >{t.label}</button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Body ── */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              {suggestedSubtasks.length > 0 && createdTaskId ? (
+                <div>
+                  <div style={{
+                    background: 'rgba(99,102,241,0.08)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '14px 16px', marginBottom: 16,
+                  }}>
+                    <p style={{ fontSize: '0.84rem', color: 'var(--text-primary)', fontWeight: 600, marginBottom: 4 }}>Task created!</p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Here are AI-suggested subtasks based on your title. Click + to add them.</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {suggestedSubtasks.map((suggestion, idx) => (
+                      <SuggestionCard key={idx} suggestion={suggestion} index={idx} onAdd={handleAddSuggestion} />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                    <button className="btn-primary" onClick={onClose}>Done</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Details Tab */}
+                  {(activeTab === 'details' || !task) && (
+                    <form id="task-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                          Title *
+                        </label>
+                        <input
+                          type="text"
+                          id="title"
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          required
+                          autoFocus
+                          className="input-base"
+                          placeholder="E.g., Implement login page"
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                          Description
+                        </label>
+                        <textarea
+                          id="description"
+                          value={description}
+                          onChange={e => setDescription(e.target.value)}
+                          rows={3}
+                          className="input-base"
+                          placeholder="Add more context about this task…"
+                          style={{ resize: 'none', lineHeight: 1.6 }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                          Due Date
+                        </label>
+                        <input
+                          type="date"
+                          id="dueDate"
+                          value={dueDate}
+                          onChange={e => setDueDate(e.target.value)}
+                          className="input-base"
+                        />
+                        {daysLeft !== null && (
+                          <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            marginTop: 8, padding: '4px 10px', borderRadius: 99,
+                            background: dueBg, color: dueColor,
+                            fontSize: '0.75rem', fontWeight: 600,
+                          }}>
+                            {daysLeft < 0 ? `${Math.abs(daysLeft)} days overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft} days remaining`}
+                          </div>
+                        )}
+                      </div>
+
+                      {!task && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '12px 14px',
+                          background: 'var(--bg-overlay)',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                        }} onClick={() => setEnableSuggestions(!enableSuggestions)}>
+                          <div style={{
+                            width: 18, height: 18, borderRadius: 5,
+                            border: `2px solid ${enableSuggestions ? 'var(--accent)' : 'var(--border-medium)'}`,
+                            background: enableSuggestions ? 'var(--accent)' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, transition: 'all 0.15s',
+                          }}>
+                            {enableSuggestions && (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20,6 9,17 4,12"/></svg>
+                            )}
+                          </div>
+                          <div>
+                            <p style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-primary)' }}>Generate AI subtasks</p>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Automatically suggest subtasks based on your task title</p>
+                          </div>
+                        </div>
+                      )}
+                    </form>
+                  )}
+
+                  {/* Subtasks Tab */}
+                  {activeTab === 'subtasks' && task && (
+                    <SubTaskList taskId={task.id} subtasks={task.subtasks || []} />
+                  )}
+
+                  {/* Comments Tab */}
+                  {activeTab === 'comments' && task && (
+                    <CommentThread taskId={task.id} comments={task.comments || []} />
+                  )}
+
+                  {/* History Tab */}
+                  {activeTab === 'history' && task && (
+                    <div>
+                      <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Change History</p>
+                      <TaskHistory taskId={task.id} />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ── Footer ── */}
+            {!(suggestedSubtasks.length > 0 && createdTaskId) && (activeTab === 'details' || !task) && (
+              <div style={{
+                padding: '14px 20px',
+                borderTop: '1px solid var(--border-subtle)',
+                display: 'flex', justifyContent: 'flex-end', gap: 10,
+                flexShrink: 0,
+              }}>
+                <button type="button" className="btn-ghost" onClick={onClose}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="task-form"
+                  disabled={isSubmitting || !title.trim()}
+                  className="btn-primary"
+                  style={{ minWidth: 110, justifyContent: 'center' }}
+                >
+                  {isSubmitting ? (
+                    <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+                      <path d="M12 2a10 10 0 0110 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                    </svg>
+                  ) : task ? 'Save Changes' : 'Create Task'}
+                </button>
+              </div>
+            )}
+          </motion.div>
         </motion.div>
-      </div>
+      )}
     </AnimatePresence>
   );
 };

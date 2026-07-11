@@ -11,15 +11,12 @@ function App() {
     <ThemeProvider>
       <LazyMotion features={domAnimation}>
         <SocketProvider>
-        <div className="min-h-screen">
-          <div className="bg-mesh" />
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/project/:id" element={<Project />} />
           </Routes>
-        </div>
         </SocketProvider>
       </LazyMotion>
     </ThemeProvider>

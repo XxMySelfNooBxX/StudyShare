@@ -65,12 +65,19 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="h-full w-full overflow-hidden">
-        <div 
-          className={`h-full pb-4 md:px-0 px-4 ${isMobile ? 'flex overflow-x-auto gap-6 snap-x snap-mandatory' : 'grid grid-cols-4 gap-4'}`}
-        >
+      <div style={{ height: '100%', width: '100%', overflow: 'hidden', padding: '16px 20px' }}>
+        <div style={{
+          display: isMobile ? 'flex' : 'grid',
+          gridTemplateColumns: isMobile ? undefined : 'repeat(4, 280px)',
+          gap: 14,
+          height: '100%',
+          overflowX: isMobile ? 'auto' : 'auto',
+          overflowY: 'hidden',
+          paddingBottom: 16,
+          justifyContent: 'start',
+        }}>
           {STATUS_COLUMNS.map((col, index) => (
-            <div key={col.id} className={isMobile ? "min-w-[85vw] snap-center" : ""}>
+            <div key={col.id} style={isMobile ? { minWidth: '85vw', scrollSnapAlign: 'center' } : {}}>
               <Column
                 status={col.id}
                 title={col.title}
