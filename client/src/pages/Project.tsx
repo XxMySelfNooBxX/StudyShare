@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KanbanProvider, useKanban } from '../context/KanbanContext';
+import { useToast } from '../context/ToastContext';
 import KanbanBoard from '../components/KanbanBoard';
 import { TaskModal } from '../components/TaskModal';
 import { TimelineView } from '../components/TimelineView';
@@ -32,6 +33,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 const ProjectContent: React.FC<{ projectId: string }> = ({ projectId }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { loading, error, selectedTask, setSelectedTask, getCriticalTasks } = useKanban();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('board');
@@ -40,7 +42,12 @@ const ProjectContent: React.FC<{ projectId: string }> = ({ projectId }) => {
 
   return (
     <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
-      <div className="bg-mesh" />
+      {/* Animated background */}
+      <div className="animated-bg">
+        <div className="orb orb-1" />
+        <div className="orb orb-3" />
+      </div>
+      <div className="grid-overlay" />
 
       {/* ── Left Sidebar ── */}
       <aside style={{
@@ -88,16 +95,20 @@ const ProjectContent: React.FC<{ projectId: string }> = ({ projectId }) => {
           </p>
 
           {/* Live sync badge */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            marginTop: 10, padding: '4px 8px',
-            background: 'var(--green-muted)',
-            borderRadius: 99, fontSize: '0.7rem', color: 'var(--green)',
-            fontWeight: 600,
-          }}>
+          <button
+            onClick={() => showToast('Real-time sync is active via WebSockets', 'success', '🔴')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              marginTop: 10, padding: '4px 8px',
+              background: 'var(--green-muted)',
+              borderRadius: 99, fontSize: '0.7rem', color: 'var(--green)',
+              fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'opacity 0.15s',
+            }}
+          >
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', position: 'relative' }} className="live-dot" />
             Live Sync
-          </div>
+          </button>
         </div>
 
         {/* Tabs */}
